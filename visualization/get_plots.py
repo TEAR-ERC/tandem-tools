@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 '''
-An executable plotting script for Tandem to save figures directly from a remote server
-By Jeena Yun
+An executable script to generate and save figures with Tandem outputs.
+Can generate followings: 1) Slip rate vs. Time at certain depth, 2) Slip vs. Time at certain depth, 3) Stress vs. Time at certain depth, 4) Initial stress profile, and 5) Cumulative slip profile
+By Jeena Yun (j4yun@ucsd.edu)
 Last modification: 2023.02.02.
 '''
 import numpy as np
