@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 '''
-An executable script to generate and save figures with Tandem outputs.
-Can generate followings: 1) Slip rate vs. Time at certain depth, 2) Slip vs. Time at certain depth, 3) Stress vs. Time at certain depth, 4) Initial stress profile, and 5) Cumulative slip profile
-By Jeena Yun (j4yun@ucsd.edu)
-Last modification: 2023.02.02.
+An executable plotting script for Tandem to save figures directly from a remote server
+By Jeena Yun
+Last modification: 2023.02.06.
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -261,9 +260,9 @@ if save_figs[4]:
                 
                 if c == 0:
                     # When first depth, initiate tstart
-                    tstart = tmp_tstart
-                    tend = tmp_tend
-                    evdep = z*np.ones(len(jumps)+1)
+                    tstart = np.copy(tmp_tstart)
+                    tend = np.copy(tmp_tend)
+                    evdep = np.copy(tmp_evdep)
                 else:
                     if len(tmp_tstart) > len(tstart):
                         # More number of events
@@ -358,20 +357,26 @@ if save_figs[4]:
     # If there are too close events, merge them as one
     new_tstart = []
     new_tend = []
+    new_evdep = []
     u = 0
     while u < len(tstart):
         nearest = np.where(tstart[tstart > tstart[u]] - tstart[u] <= mingap)[0] + u + 1
         if len(nearest) != 0:
             new_tstart.append(tstart[u])
             new_tend.append(tend[max(nearest)])
+            new_evdep.append(evdep[u])
             u += len(nearest)+1
         else:
             new_tstart.append(tstart[u])
             new_tend.append(tend[u])
+            new_evdep.append(evdep[u])
             u += 1
+
     tstart = np.copy(new_tstart)
     tend = np.copy(new_tend)
+    evdep = np.copy(new_evdep)
 
+    evslip = np.zeros(tstart.shape)
     # Now interpolate the cumulative slip using given event time ranges
     for i in np.argsort(abs(dep)):
         z = abs(dep[i])
@@ -402,12 +407,19 @@ if save_figs[4]:
         cs1sec.append([item for sublist in cs for item in sublist])
         dep1sec.append([item for sublist in depth for item in sublist])
 
+        # -------------------- Event detph
+        if np.isin(z,evdep):
+            indx = np.where(z==evdep)[0]
+            evslip[indx] = f(tstart)[indx]
+
     # --- Plot the result
     plt.rcParams['font.size'] = '27'
     plt.figure(figsize=(18,11))
 
     plt.plot(cs5yr,dep5yr,color='royalblue',lw=1)
     plt.plot(cs1sec,dep1sec,color='chocolate',lw=1)
+    ev = plt.scatter(evslip,evdep,marker='*',s=700,facecolor=myburgundy,edgecolors='k',lw=2,zorder=3)
+    plt.legend([ev],['Hypocenters'],fontsize=25,framealpha=1)
     plt.ylabel('Depth [km]',fontsize=30)
     plt.xlabel('Cumulative Slip [m]',fontsize=30)
     xl = plt.gca().get_xlim()
