@@ -194,10 +194,10 @@ if save_figs[3]:
 # Cumslip vs. Depth ----------------------------------------------------------------------------------------------------------------------
 if save_figs[4]:
     print('Cumulative slip vs. Depth plot >>> ',end='')
-    cs5yr = []
-    dep5yr = []
-    cs1sec = []
-    dep1sec = []
+    cscreep = []
+    depcreep = []
+    cscoseis = []
+    depcoseis = []
 
     def event_times(dep,outputs,Vths,cuttime):
         '''
@@ -395,19 +395,19 @@ if save_figs[4]:
 
         # -------------------- Creep
         t5yr = np.arange(time[0],time[-1],tcreep)
-        cs5yr.append(f(t5yr))
-        dep5yr.append(z*np.ones(len(t5yr)))
+        cscreep.append(f(t5yr))
+        depcreep.append(z*np.ones(len(t5yr)))
         
         # -------------------- Coseismic
         cs = []
         depth = []
         for j in range(len(tstart)):
-            t1sec = np.arange(tstart[j],tend[j],tcoseismic)
-            cs.append(f(t1sec))
-            depth.append(z*np.ones(len(t1sec)))
+            tcoseis = np.arange(tstart[j],tend[j],tcoseismic)
+            cs.append(f(tcoseis))
+            depth.append(z*np.ones(len(tcoseis)))
 
-        cs1sec.append([item for sublist in cs for item in sublist])
-        dep1sec.append([item for sublist in depth for item in sublist])
+        cscoseis.append([item for sublist in cs for item in sublist])
+        depcoseis.append([item for sublist in depth for item in sublist])
 
         # -------------------- Event detph
         if np.isin(z,evdep):
@@ -418,8 +418,8 @@ if save_figs[4]:
     plt.rcParams['font.size'] = '27'
     plt.figure(figsize=(18,11))
 
-    plt.plot(cs5yr,dep5yr,color='royalblue',lw=1)
-    plt.plot(cs1sec,dep1sec,color='chocolate',lw=1)
+    plt.plot(cscreep,depcreep,color='royalblue',lw=1)
+    plt.plot(cscoseis,depcoseis,color='chocolate',lw=1)
     ev = plt.scatter(evslip,evdep,marker='*',s=700,facecolor=myburgundy,edgecolors='k',lw=2,zorder=3)
     plt.legend([ev],['Hypocenters'],fontsize=25,framealpha=1)
     plt.ylabel('Depth [km]',fontsize=30)
