@@ -2,7 +2,7 @@
 '''
 An executable plotting script for Tandem to save figures directly from a remote server
 By Jeena Yun
-Last modification: 2023.02.06.
+Last modification: 2023.02.07.
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,14 +42,16 @@ cuttime = 700*yr2sec
 Wf = 24
 
 # Extract data ---------------------------------------------------------------------------------------------------------------------------
-fnames = glob.glob('%s/%s/outputs/*dp*.csv'%(save_dir))
-if len(fnames) == 0:
-    raise NameError('No such file found - check the input')
-
-outputs = ()
-dep = []
 if compute:
     print('Compute on - extract outputs...',end=' ')
+
+    fnames = glob.glob('%s/%s/outputs/*dp*.csv'%(save_dir))
+    if len(fnames) == 0:
+        raise NameError('No such file found - check the input')
+    
+    outputs = ()
+    dep = []
+
     for fn in fnames:
         with open(fn, 'r') as csvfile:
             csvreader = csv.reader(csvfile)
@@ -81,8 +83,8 @@ else:
 # Slip rate vs. Time ---------------------------------------------------------------------------------------------------------------------
 if abs(save_figs[0])>0:
     target_depth = save_figs[0] # in km
-    print('Slip rate vs. Time plot >> Depth = %1.1f [km]'%target_depth)
-    indx = np.where(abs(abs(dep) - abs(target_depth)) < 1e-1)[0][0]
+    indx = np.argmin(abs(abs(dep) - abs(target_depth)))
+    print('Slip rate vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
 
     plt.rcParams['font.size'] = '15'
     plt.figure(figsize=(8,6))
@@ -111,8 +113,8 @@ if abs(save_figs[0])>0:
 # Slip vs. Time --------------------------------------------------------------------------------------------------------------------------
 if abs(save_figs[1])>0:
     target_depth = save_figs[1] # in km
-    print('Slip vs. Time plot >> Depth = %1.1f [km]'%target_depth)
-    indx = np.where(abs(abs(dep) - abs(target_depth)) < 1e-1)[0][0]
+    indx = np.argmin(abs(abs(dep) - abs(target_depth)))
+    print('Slip vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
     time = np.array(outputs[indx])[:,0]
     cumslip = np.array(outputs[indx])[:,2]
 
@@ -135,8 +137,8 @@ if abs(save_figs[1])>0:
 # Stress vs. Time ------------------------------------------------------------------------------------------------------------------------
 if abs(save_figs[2])>0:
     target_depth = save_figs[2] # in km
-    print('Stress vs. Time plot >> Depth = %1.1f [km]'%target_depth)
-    indx = np.where(abs(abs(dep) - abs(target_depth)) < 1e-1)[0][0]
+    indx = np.argmin(abs(abs(dep) - abs(target_depth)))
+    print('Stress vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
 
     plt.rcParams['font.size'] = '15'
     fig,ax = plt.subplots(ncols=2,figsize=(14,6))
