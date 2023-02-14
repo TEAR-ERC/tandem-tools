@@ -2,11 +2,13 @@
 '''
 An executable plotting script for Tandem to save figures directly from a remote server
 By Jeena Yun
-Last modification: 2023.02.07.
+Update note: replaced input arguments to argparse
+Last modification: 2023.02.14.
 '''
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
+import argparse
 import glob
 import csv
 
@@ -33,18 +35,56 @@ wk2sec = 7*24*60*60
 # cuttime (optional): show result up until to the given time to save computation time. Give zero if unnecessary.
 # Wf (optional): depth of fault. Used only for plotting purpose (to set ylim). Give zero if unnecessary.
 # ***
-save_dir = '/export/dump/jyun/DZ_triangular'
-compute = 0
-save_figs = [0.01, 2, 0, 0, 1] # Slip rate vs. Time | Slip vs. Time | Stress vs. Time | Initial stress | Cumulative slip vs. Depth
-plot_in_sec = 0
-Vths = 1e-2
-Vlb = 1e-8
-dt_creep = 2*yr2sec
-dt_coseismic = 1
-mingap = 60
-dt_interm = 1*wk2sec
-cuttime = 700*yr2sec
-Wf = 24
+
+parser = argparse.ArgumentParser()
+parser.add_argument("save_dir", help=": directory to output files and to save plots")
+parser.add_argument("-c","--compute", action="store_true", help=": Activate only when you want to compute")
+parser.add_argument("-sec","--plot_in_sec", action="store_true", help=": Turns time axis to be in seconds")
+
+parser.add_argument("-sr","--sliprate", type=float, help=": If used, depth of slip rate vs. time plot [km]", default=0)
+parser.add_argument("-sl","--slip", type=float, help=": If used, depth of slip vs. time plot [km]", default=0)
+parser.add_argument("-st","--stress", type=float, help=": If used, depth of stress vs. time plot [km]", default=0)
+parser.add_argument("-ist","--initstress", action="store_true", help=": ON/OFF initial stress profile")
+parser.add_argument("-csl","--cumslip", action="store_true", help=": ON/OFF cumulative slip profile")
+
+parser.add_argument("-dtcr","--dt_creep", type=float, help=": Contour interval for CREEPING section [yr]")
+parser.add_argument("-dtco","--dt_coseismic", type=float, help=": Contour interval for COSEISMIC section [s]")
+parser.add_argument("-dtint","--dt_interm", type=float, help=": Contour interval for INTERMEDIATE section [wk]")
+
+parser.add_argument("-vths","--Vths", type=float, help=": Slip-rate threshold to define coseismic section [m/s]")
+parser.add_argument("-vlb","--Vlb", type=float, help=": When used with --Vth becomes lower bound of slip rate of intermediate section [m/s]")
+
+parser.add_argument("-ct","--cuttime", type=float, help=": Show result up until to the given time to save computation time [yr]")
+parser.add_argument("-wf","--Wf", type=float, help=": Depth of fault [km]", default=24)
+parser.add_argument("-mg","--mingap", type=float, help=": Minimum seperation time between two different events [s]", default=60)
+
+args = parser.parse_args()
+
+# --- Check dependencies
+if args.cumslip:        # When args.cumslip are true
+    if not args.dt_creep:
+        parser.error('Required field \'dt_creep\' is not defined - check again')
+    if not args.dt_coseismic:
+        parser.error('Required field \'dt_coseismic\' is not defined - check again')
+    if not args.Vths:
+        print('Required field \'Vths\' not defined - using default value 1e-2 m/s')
+        args.Vths = 1e-2
+    if args.dt_interm:
+        if not args.Vlb:
+            print('Required field \'Vlb\' not defined - using default value 1e-8 m/s')
+            args.Vlb = 1e-8
+
+save_dir = args.save_dir
+compute = args.compute
+plot_in_sec = args.plot_in_sec
+Vths = args.Vths
+Vlb =  args.Vlb
+dt_creep = args.dt_creep*yr2sec
+dt_coseismic = args.dt_coseismic
+dt_interm = args.dt_interm*wk2sec
+cuttime = args.cuttime*yr2sec
+mingap = args.mingap
+Wf = args.Wf
 
 # Extract data ---------------------------------------------------------------------------------------------------------------------------
 if compute:
@@ -86,8 +126,8 @@ else:
     dep = np.load('%s/outputs_depthinfo.npy'%(save_dir))
 
 # Slip rate vs. Time ---------------------------------------------------------------------------------------------------------------------
-if abs(save_figs[0])>0:
-    target_depth = save_figs[0] # in km
+if abs(args.sliprate)>0:
+    target_depth = args.sliprate # in km
     indx = np.argmin(abs(abs(dep) - abs(target_depth)))
     print('Slip rate vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
 
@@ -116,8 +156,8 @@ if abs(save_figs[0])>0:
     plt.savefig('%s/sliprate.png'%(save_dir),dpi=300)
 
 # Slip vs. Time --------------------------------------------------------------------------------------------------------------------------
-if abs(save_figs[1])>0:
-    target_depth = save_figs[1] # in km
+if abs(args.slip)>0:
+    target_depth = args.slip # in km
     indx = np.argmin(abs(abs(dep) - abs(target_depth)))
     print('Slip vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
     time = np.array(outputs[indx])[:,0]
@@ -140,8 +180,8 @@ if abs(save_figs[1])>0:
     plt.savefig('%s/slip.png'%(save_dir))
 
 # Stress vs. Time ------------------------------------------------------------------------------------------------------------------------
-if abs(save_figs[2])>0:
-    target_depth = save_figs[2] # in km
+if abs(args.stress)>0:
+    target_depth = args.stress # in km
     indx = np.argmin(abs(abs(dep) - abs(target_depth)))
     print('Stress vs. Time plot >> Depth = %1.1f [km]'%abs(dep[indx]))
 
@@ -169,7 +209,7 @@ if abs(save_figs[2])>0:
     plt.savefig('%s/stresses.png'%(save_dir))
 
 # Initial stress vs. Time ------------------------------------------------------------
-if save_figs[3]:
+if args.initstress:
     print('Initial stress vs. Time plot')
     z = np.zeros(len(dep))
     tau = np.zeros(len(dep))
@@ -197,8 +237,18 @@ if save_figs[3]:
     plt.savefig('%s/stressvsdepth.png'%(save_dir))
 
 # Cumslip vs. Depth ----------------------------------------------------------------------------------------------------------------------
-if save_figs[4]:
+if args.cumslip:
     print('Cumulative slip vs. Depth plot >>> ',end='')
+    if abs(cuttime) < 1e-3:
+        print('No cutting')
+    else:
+        print('Cut at %2.1f yr'%(cuttime/yr2sec))
+
+    if Vlb > 0:
+        print('%1.0e < Slip rate < %1.0e'%(Vlb,Vths))
+    else:
+        print('Slip rate > %1.0e'%(Vths))
+
     cscreep = []
     depcreep = []
     cscoseis = []
@@ -206,11 +256,6 @@ if save_figs[4]:
     if dt_interm > 0:        
         csinterm = []
         depinterm = []
-
-    if abs(cuttime) < 1e-3:
-        print('No cutting')
-    else:
-        print('Cut at %2.1f yr'%(cuttime/yr2sec))
 
     def event_times(dep,outputs,Vlb,Vths,cuttime):
         '''
@@ -232,27 +277,17 @@ if save_figs[4]:
             sliprate = np.array(outputs[i])[:,4]
             cumslip = np.array(outputs[i])[:,2]
 
-            if abs(cuttime) < 1e-3:
-                if c == 0:
-                    print('No cutting')
-            else:
+            if abs(cuttime) >= 1e-3:
                 if cuttime > np.max(time):
                     raise ValueError('Cuttime larger than total simulation time - check again')
-                else:
-                    if c == 0:
-                        print('Cut at %2.1f yr'%(cuttime/yr2sec))
-                    sliprate = sliprate[time <= cuttime]
-                    cumslip = cumslip[time <= cuttime]
-                    time = time[time <= cuttime]
+                sliprate = sliprate[time <= cuttime]
+                cumslip = cumslip[time <= cuttime]
+                time = time[time <= cuttime]
 
             # Define events by sliprate
             if Vlb > 0:
-                if c == 0:
-                    print('%1.0e < Slip rate < %1.0e'%(Vlb,Vths))
                 events = np.where(np.logical_and(sliprate < Vths,sliprate > Vlb))[0]
             else:
-                if c == 0:
-                    print('Slip rate > %1.0e'%(Vths))
                 events = np.where(sliprate > Vths)[0]
 
             if len(events) == 0:
