@@ -35,7 +35,6 @@ wk2sec = 7*24*60*60
 # cuttime (optional): show result up until to the given time to save computation time. Give zero if unnecessary.
 # Wf (optional): depth of fault. Used only for plotting purpose (to set ylim). Give zero if unnecessary.
 # ***
-
 parser = argparse.ArgumentParser()
 parser.add_argument("save_dir", help=": directory to output files and to save plots")
 parser.add_argument("-c","--compute", action="store_true", help=": Activate only when you want to compute")
@@ -51,10 +50,10 @@ parser.add_argument("-dtcr","--dt_creep", type=float, help=": Contour interval f
 parser.add_argument("-dtco","--dt_coseismic", type=float, help=": Contour interval for COSEISMIC section [s]")
 parser.add_argument("-dtint","--dt_interm", type=float, help=": Contour interval for INTERMEDIATE section [wk]")
 
-parser.add_argument("-vths","--Vths", type=float, help=": Slip-rate threshold to define coseismic section [m/s]")
-parser.add_argument("-vlb","--Vlb", type=float, help=": When used with --Vth becomes lower bound of slip rate of intermediate section [m/s]")
+parser.add_argument("-Vths","--Vths", type=float, help=": Slip-rate threshold to define coseismic section [m/s]")
+parser.add_argument("-Vlb","--Vlb", type=float, help=": When used with --Vth becomes lower bound of slip rate of intermediate section [m/s]")
 
-parser.add_argument("-ct","--cuttime", type=float, help=": Show result up until to the given time to save computation time [yr]")
+parser.add_argument("-ct","--cuttime", type=float, help=": Show result up until to the given time to save computation time [yr]", default=0)
 parser.add_argument("-wf","--Wf", type=float, help=": Depth of fault [km]", default=24)
 parser.add_argument("-mg","--mingap", type=float, help=": Minimum seperation time between two different events [s]", default=60)
 
@@ -69,19 +68,22 @@ if args.cumslip:        # When args.cumslip are true
     if not args.Vths:
         print('Required field \'Vths\' not defined - using default value 1e-2 m/s')
         args.Vths = 1e-2
+    dt_creep = args.dt_creep*yr2sec
+    dt_coseismic = args.dt_coseismic
     if args.dt_interm:
+        dt_interm = args.dt_interm*wk2sec
         if not args.Vlb:
             print('Required field \'Vlb\' not defined - using default value 1e-8 m/s')
             args.Vlb = 1e-8
+    else:
+        dt_interm = 0
+        args.Vlb = 0
 
 save_dir = args.save_dir
 compute = args.compute
 plot_in_sec = args.plot_in_sec
 Vths = args.Vths
 Vlb =  args.Vlb
-dt_creep = args.dt_creep*yr2sec
-dt_coseismic = args.dt_coseismic
-dt_interm = args.dt_interm*wk2sec
 cuttime = args.cuttime*yr2sec
 mingap = args.mingap
 Wf = args.Wf
