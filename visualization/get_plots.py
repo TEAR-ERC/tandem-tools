@@ -150,17 +150,16 @@ if sum([args.image_sliprate,args.image_shearT,args.image_normalT,args.image_stat
 # Input variable profile -----------------------------------------------------------------------------------------------------------------
 if args.stressprof:
     from stress_profile import *
-    plot_stress_vs_depth(save_dir,args.Wf,outputs,dep)
-    
-    if args.ev_anal:
-        plot_hist(save_dir,outputs,dep)
+    plot_stress_vs_depth(save_dir,args.Wf,outputs,dep)    
+    plot_hist(save_dir,outputs,dep)
 
 # Cumslip vs. Depth ----------------------------------------------------------------------------------------------------------------------
 if args.cumslip:
     from cumslip_compute import *
     from cumslip_plot import *
     cumslip_outputs = compute_cumslip(outputs,dep,cuttime,args.Vlb,args.Vths,dt_creep,dt_coseismic,dt_interm,args.mingap)
-    plot_event_analyze(save_dir,args.Wf,cumslip_outputs,args.rths)
+    if args.ev_anal:
+        plot_event_analyze(save_dir,args.Wf,cumslip_outputs,args.rths)
 
     # --- Plot the result
     if args.spin_up > 0:
