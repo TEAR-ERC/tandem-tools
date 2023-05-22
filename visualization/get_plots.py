@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # By Jeena Yun (j4yun@ucsd.edu)
-# Last modification: 2023.05.18.
+# Last modification: 2023.05.22.
 
 import numpy as np
-import glob
 import argparse
-import csv
 
 yr2sec = 365*24*60*60
 wk2sec = 7*24*60*60
@@ -79,6 +77,8 @@ cuttime = args.cuttime*yr2sec
 
 # Extract data ---------------------------------------------------------------------------------------------------------------------------
 if args.compute:
+    import glob
+    import csv
     print('Compute on - extract outputs...',end=' ')
     fnames = glob.glob('%s/outputs/*.csv'%(save_dir))
     if len(fnames) == 0:
@@ -101,6 +101,7 @@ if args.compute:
                 dat.append(np.asarray(row).astype(float))
         
         outputs = outputs + (dat,)
+    outputs = np.array(outputs)
     dep = np.array(dep)
     print('done!')
 
