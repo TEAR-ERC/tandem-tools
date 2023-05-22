@@ -3,9 +3,10 @@
 ****************************************
 
 get_plots.py is an executable python script for generating and saving plots using Tandem fault outputs.
-The script requires the fault outputs to be in a single folder named 'outputs'
+The script requires the fault outputs (.csv files) to be in a single folder named 'outputs'
 The script relies on individual plotting scripts: faultoutputs_vs_time.py, faultoutputs_image.py, cumslip_compute.py, cumslip_plot.py, and stress_profile.py.
-See create_plot.sh for example usages.
+See create_plot.sh for command line examples.
+Example output files and figures are contained in BP1_outputs.tar.gz.
 Feel free to reach out to the author for any bugs or suggestions for improvement.
 
 *** Required packages
