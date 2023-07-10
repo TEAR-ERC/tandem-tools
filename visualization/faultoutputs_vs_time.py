@@ -77,8 +77,8 @@ def stress_time(save_dir,outputs,dep,stress,plot_in_sec,save_on=True):
     indx = np.argmin(abs(abs(dep) - abs(target_depth)))
     print('Depth = %1.1f [km]'%abs(dep[indx]))
 
-    plt.rcParams['font.size'] = '15'
     fig,ax = plt.subplots(ncols=2,figsize=(14,6))
+    plt.rcParams['font.size'] = '15'
     if plot_in_sec:        # --- Plot in seconds
         ax[0].plot(np.array(outputs[indx])[:,0], np.array(outputs[indx])[:,3], color='k', lw=2.5)
         ax[0].set_xlabel('Time [s]',fontsize=17)
@@ -99,7 +99,7 @@ def stress_time(save_dir,outputs,dep,stress,plot_in_sec,save_on=True):
         ax[1].set_title('Depth = %1.1f [km]'%abs(dep[indx]),fontsize=20,fontweight = 'bold')
     plt.tight_layout()
     if save_on:
-        plt.savefig('%s/stress.png'%(save_dir))
+        plt.savefig('%s/stresses.png'%(save_dir))
 
 def state_time(save_dir,outputs,dep,state_var,plot_in_sec,save_on=True):
     target_depth = state_var # in km
