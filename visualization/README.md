@@ -21,14 +21,16 @@ Please change **root_dir** variable to match the path to your Tandem outputs bef
 **[General parameters]**
 - job_name : Name of the Tandem job
 
-**[Output prefix]**
-- -fp_prefix (--faultp_prefix) : Prefix of fault probe outputs
-- -dp_prefix (--domainp_prefix) : Prefix of domain probe output
-
 **[Plot type]**
-- -im (--image) : Plot spatiotemporal evolution plot for the given on-fault variable. Choices = ['state','slip','sliprate','shearT','delshearT','normalT','delnormalT']. 
-- -csl (--cumslip) : Plot spatiotemporal evolution of cumulative slip.
+- -ev (--evolution) : Plot spatiotemporal evolution plot for the given on-fault variable. Choices = ['sliprate','cumslip','state','slip','shearT','delshearT','normalT','delnormalT']. 
 - -ts (--timeseries) : Plot time series of the given variable. Choices = ['state','slip','sliprate','stress','displacement']. Option 'displacement' requires two values for the -loc option (defining (x,y)), while other variables require one (depth information) or less (peak along fault) values for the -loc option.
+- -mesh (--mesh) : Plot given mesh file with prescribed boundary conditions. 
+
+**[Output prefix]**
+- -fp_prefix (--faultp_prefix) : Prefix of fault probe outputs. Necessary to plot spatiotemporal evolution or time series plots of slip, slip rate, shear and normal stresses, and state variable.
+- -dp_prefix (--domainp_prefix) : Prefix of domain probe output. Necessary to plot time series of displacements.
+
+**[Station location control]**
 - -loc (--target_loc) : When used with --timeseries, plot timeseries at the given receiver location. If not given any value, plot peak along the fault.
 
 **[Time control]**

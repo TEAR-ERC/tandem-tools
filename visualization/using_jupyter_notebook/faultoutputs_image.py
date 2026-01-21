@@ -2,7 +2,7 @@
 '''
 Functions related to plotting spatio-temporal evolution of variables as an image
 By Jeena Yun
-Last modification: 2025.10.08.
+Last modification: 2026.01.14.
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ mymint = (70/255,225/255,165/255)
 # fields: Time [s] | state [s?] | cumslip0 [m] | traction0 [MPa] | slip-rate0 [m/s] | normal-stress [MPa]
 # Index:     0     |      1     |       2      |        3        |         4        |          5 
 
-def fout_image(outputs, dep, event_info, **kwargs):
+def fout_image(var, event_info, **kwargs):
     options = {
         'vmin': None,
         'vmax': None,
@@ -27,7 +27,7 @@ def fout_image(outputs, dep, event_info, **kwargs):
         'vert_size': 11,
         'sys_col' : mymint,
         'pr_col' : 'w',
-        'no_classfication': False,
+        'no_classfication': True,
         'plot_in_timestep': True,
         'plot_in_sec': False,
         'colorbar_off': False,
@@ -37,6 +37,8 @@ def fout_image(outputs, dep, event_info, **kwargs):
     }
     options.update(kwargs)
     
+    outputs, dep = var.outputs, var.dep
+
     processed_outputs = class_figtype(outputs, event_info, options)[0]
     X, Y, var, options = get_var(processed_outputs, dep, options)
     ax = plot_image(X, Y, var, outputs, event_info, options)
@@ -45,17 +47,17 @@ def fout_image(outputs, dep, event_info, **kwargs):
 def get_var(outputs, dep, options):
     idx = {'state': 1, 'slip': 2, 'shearT': 3, 'delshearT': 3, 'sliprate': 4, 'normalT': 5, 'delnormalT': 5}
     ii = np.argsort(abs(dep))
-    if options['evolution'][-1] == 'T' or idx[options['evolution']] == 4:
-        var = abs(outputs[ii,1:,idx[options['evolution']]])
+    if options['target_variable'][-1] == 'T' or idx[options['target_variable']] == 4:
+        var = abs(outputs[ii,1:,idx[options['target_variable']]])
         var = abs(var)
         start_from_1 = True
     else:
-        var = outputs[ii,:,idx[options['evolution']]]
+        var = outputs[ii,:,idx[options['target_variable']]]
         start_from_1 = False
 
-    if options['evolution'] == 'shearT': # ---- Total stress
+    if options['target_variable'] == 'shearT': # ---- Total stress
         var = np.array([var[i,:] for i in range(var.shape[0])])
-    elif 'd' in options['evolution']:    # ---- Stress change
+    elif 'd' in options['target_variable']:    # ---- Stress change
         var = np.array([var[i,:]-var[i,0] for i in range(var.shape[0])])
 
     if options['plot_in_timestep']:
@@ -87,7 +89,7 @@ def gen_cmap(options):
                'sliprate': 'Slip Rate [m/s]', 
                'normalT': 'Normal Stress [MPa]', 
                'delnormalT': 'Normal Stress Change [MPa]'} 
-    if options['evolution'] == 'sliprate':
+    if options['target_variable'] == 'sliprate':
         cm = mpl.colormaps['RdYlBu_r']
         col_list = [cm(i)[0:3] for i in [0.15, 0.5, 0.8, 0.9]]
         col_list = [cm(0.15)[0:3], mpl.colormaps['jet'](0.67), cm(0.8)[0:3], cm(0.9)[0:3]]
@@ -97,20 +99,20 @@ def gen_cmap(options):
         float_list = [0, mpl.colors.LogNorm(options['vmin'], options['vmax'])(Vp), mpl.colors.LogNorm(options['vmin'], options['vmax'])(V0)]
         [float_list.append(k) for k in np.linspace(mpl.colors.LogNorm(options['vmin'], options['vmax'])(options['Vths']),1,4)]
         cmap_n = get_continuous_cmap(col_list, input_hex=False, float_list=float_list)
-    elif 'd' in options['evolution']: # ---- plotting stress change
+    elif 'd' in options['target_variable']: # ---- plotting stress change
         cm = cram.vik
         col_list = [cm(i) for i in np.linspace(0,1,6)]
         col_list.insert(3,mpl.colors.to_rgb('w'))
         float_list = [mpl.colors.Normalize(options['vmin'], options['vmax'])(i) for i in np.linspace(options['vmin'], 0, 4)]
         [float_list.append(mpl.colors.Normalize(options['vmin'], options['vmax'])(k)) for k in np.linspace(0, options['vmax'], 4)[1:]]
         cmap_n = get_continuous_cmap(col_list, input_hex=False, float_list=float_list)
-    elif options['evolution'][-1] == 'T' and 'del' not in options['evolution']: # ---- plotting total stress
+    elif options['target_variable'][-1] == 'T' and 'del' not in options['target_variable']: # ---- plotting total stress
         cmap_n = cram.davos
-    elif options['evolution'] == 'state':
+    elif options['target_variable'] == 'state':
         cmap_n = 'magma'
-    elif options['evolution'] == 'slip':
+    elif options['target_variable'] == 'slip':
         cmap_n = 'viridis'
-    cb_label = cb_dict[options['evolution']]
+    cb_label = cb_dict[options['target_variable']]
     return cmap_n,cb_label
 
 def class_figtype(outputs, event_info, options):
@@ -269,22 +271,22 @@ def plot_image(X, Y, var, outputs, event_info, options):
     plt.rcParams['font.size'] = '27'
     _,ax = plt.subplots(figsize=(options['horz_size'], options['vert_size']))
 
-    if 'd' in options['evolution']:
+    if 'd' in options['target_variable']:
         maxdvar = max([abs(np.min(var)), abs(np.max(var))])
         options['vmin'] = -maxdvar
         options['vmax'] = maxdvar
-    elif 'sliprate' in options['evolution']:
+    elif 'sliprate' in options['target_variable']:
         options['vmin'] = 1e-12
         options['vmax'] = 1e1
     cmap_n,cb_label = gen_cmap(options)
 
-    if options['evolution'] == 'sliprate':
+    if options['target_variable'] == 'sliprate':
         cb = plt.pcolormesh(X, Y, var, cmap=cmap_n, norm=mpl.colors.LogNorm(options['vmin'], options['vmax']))
         acolor = 'w'
-    elif options['evolution'] == 'shearT': # ---- Total stress
+    elif options['target_variable'] == 'shearT': # ---- Total stress
         cb = plt.pcolormesh(X, Y, var, cmap=cmap_n, vmin= options['vmin'], vmax= options['vmax'])
         acolor = 'k'
-    elif 'd' in options['evolution']:      # ---- Stress change
+    elif 'd' in options['target_variable']:      # ---- Stress change
         cb = plt.pcolormesh(X, Y, var, cmap=cmap_n, vmin= options['vmin'], vmax= options['vmax'])
         acolor = 'k'
     else:
@@ -297,11 +299,13 @@ def plot_image(X, Y, var, outputs, event_info, options):
     fig_name = decoration(outputs, event_info, Wf, acolor, options)
 
     plt.tight_layout()
-    if  options['plot_in_timestep']:
-        plt.savefig('%s/%s%s_timesteps.png'%(options['save_dir'], options['evolution'], fig_name),dpi=300)
-    else:
-        plt.savefig('%s/%s%s.png'%(options['save_dir'],options['evolution'], fig_name),dpi=300)
-    return ax
+    if options['save_on']:
+        if  options['plot_in_timestep']:
+            plt.savefig('%s/%s%s_timesteps.png'%(options['save_dir'], options['target_variable'], fig_name),dpi=300)
+        else:
+            plt.savefig('%s/%s%s.png'%(options['save_dir'],options['target_variable'], fig_name),dpi=300)
+    plt.show()
+    # return ax
 
 def get_continuous_cmap(col_list, input_hex=False, float_list=None):
     import matplotlib.colors as mcolors

@@ -1,0 +1,15 @@
+meshio
+matplotlib
+numpy
+pandas
+scipy
+ipywidgets
+lupa
+
+cmcrameri
+
+glob
+os
+time
+pathlib
+IPython

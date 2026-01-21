@@ -5,7 +5,8 @@ Author: Jeena Yun (j4yun@ucsd.edu)
 Last modification: 2025.10.15.
 '''
 # ------------------------- PLEASE CHANGE THIS LINE BEFORE USING ------------------------- #
-root_dir = '/ROOT/DIRECTORY/TO/YOUR/TANDEM/OUTPUTS'
+# root_dir = '/ROOT/DIRECTORY/TO/YOUR/TANDEM/OUTPUTS/'
+root_dir = './'
 # ---------------------------------------------------------------------------------------- #
 
 import argparse
@@ -19,14 +20,16 @@ wk2sec = 7*24*60*60
 parser = argparse.ArgumentParser()
 parser.add_argument("job_name", help=": Name of the Tandem job")
 
+# Plot type
+parser.add_argument("-ev", "--evolution", type=str, choices=['state','slip','sliprate','shearT','delshearT','normalT','delnormalT','cumslip'], help=": Type of 2D spatiotemporal evolution plot ['state','slip','sliprate','shearT','delshearT','normalT','delnormalT']")
+parser.add_argument("-ts", "--timeseries", type=str, choices=['state','slip','sliprate','stress','displacement'], help=": Plot time series of the given variable")
+parser.add_argument("-mesh", "--mesh", type=str, help=": Plot given mesh file with prescribed boundary conditions")
+
 # Output prefix
 parser.add_argument("-fp_prefix", "--faultp_prefix", help=": Prefix of fault probe outputs")
 parser.add_argument("-dp_prefix", "--domainp_prefix", help=": Prefix of domain probe outputs")
 
-# Plot type
-parser.add_argument("-im", "--image", type=str, choices=['state','slip','sliprate','shearT','delshearT','normalT','delnormalT','dCFS'], help=": Type of image plot ['state','slip','sliprate','shearT','delshearT','normalT','delnormalT']")
-parser.add_argument("-csl", "--cumslip", action="store_true", help=": ON/OFF cumulative slip profile")
-parser.add_argument("-ts", "--timeseries", type=str, choices=['state','slip','sliprate','stress','displacement'], help=": Plot time series of the given variable")
+# Station location control
 parser.add_argument("-loc", "--target_loc", nargs='+', type=float, help=": When used with --timeseries, plot timeseries at the given receiver location. For displacement, it takes (x,y) location, while on-fault variables only need depth. If not given, plot peak along the fault.")
 
 # Time control
@@ -38,33 +41,57 @@ args = parser.parse_args()
 kwargs = {k: v for k, v in vars(args).items() if v is not None}
 
 # ----- Define output directory
+# save_dir = root_dir + args.job_name + '/outputs'
 save_dir = root_dir + args.job_name
 kwargs['save_dir'] = save_dir
 
 # ------ Extract output
 var = OUTPUTS(save_dir)
-var.get_outputs(abs_on=True, faultp_prefix=args.faultp_prefix)
-outputs, dep = var.outputs, var.dep
+
+# ------ Sanitary check
+if args.evolution and not args.faultp_prefix:
+    raise SyntaxError("Fault probe output prefix not given - cannot plot")
+
+if args.timeseries:
+    if args.timeseries == 'displacement':
+        if not args.domainp_prefix:
+            raise SyntaxError("Domain probe output prefix not given - cannot plot displacement time series")
+    else:
+        if not args.faultp_prefix:
+            raise SyntaxError("Fault probe output prefix not given - cannot plot on-fault time series")
+
+if args.evolution or (args.timeseries and not args.timeseries == 'displacement'):
+    var.get_outputs(abs_on=True, faultp_prefix=args.faultp_prefix)
+    outputs, dep = var.outputs, var.dep
 
 # ------ Compute event info
-if (args.cumslip or args.image):
+if args.evolution:
     event_info = var.get_event_info(**kwargs, save_on=True)
 else:
     event_info = []
 
 # ------ Fault output image 
-if args.image:
-    from faultoutputs_image import fout_image    
-    fout_image(outputs, dep, event_info, **kwargs)
+if args.evolution:
+    # ----- Cumslip vs. Depth
+    if args.evolution == 'cumslip':
+        from cumslip_plot import only_cumslip
+        from cumslip_compute import compute_cumslip
+        
+        cumslip_outputs = compute_cumslip(outputs, dep, event_info, **kwargs)
+        # --- Plot the result
+        only_cumslip(cumslip_outputs, event_info, **kwargs)
+    else:
+        from faultoutputs_image import fout_image    
+        fout_image(outputs, dep, event_info, **kwargs)
 
-# ----- Cumslip vs. Depth
-if args.cumslip:
-    from cumslip_plot import only_cumslip
-    from cumslip_compute import compute_cumslip
-    
-    cumslip_outputs = compute_cumslip(outputs, dep, event_info, **kwargs)
-    # --- Plot the result
-    only_cumslip(cumslip_outputs, event_info, **kwargs)
+# ----- Mesh
+if args.mesh:
+    from read_mesh import GmshMesh2D
+    if '.msh' not in args.mesh:
+        args.mesh = args.mesh + '.msh'
+    mesh_fname = save_dir + '/' + args.mesh
+    my_mesh = GmshMesh2D(mesh_fname)
+    my_mesh.plot_physical_curves(save_dir=save_dir)
 
 # ----- Timeseries
 if args.timeseries:    

@@ -2,7 +2,7 @@
 '''
 Functions related to reading tandem outputs: fault/fault_probe/domain_probe
 By Jeena Yun
-Last modification: 2025.03.14.
+Last modification: 2026.01.14.
 '''
 import numpy as np
 from glob import glob
@@ -117,14 +117,13 @@ def get_event_info(outputs, dep, **kwargs):
     options = base_event_criteria()
     options.update(kwargs)
 
-    branch_name = options['save_dir'].split('/')[-1]
     cumslip_dir = options['save_dir']
     if options['mode'] == 'potency': decor = 'Pths_mult'
     elif options['mode'] == 'sliprate': decor = 'Vths'
 
     fname = '%s/event_info_%s_%1.0e_rths_%d_width_%d_dist_%d.npy'%(cumslip_dir, decor, options['Pths_mult'], options['rths'], options['width'], options['distance'])
     exist_cumslip = os.path.exists(fname)
-    if not exist_cumslip or 'pert' in branch_name:
+    if not exist_cumslip or 'pert' in options['save_dir']:
         from event_analyze import detect_events
         print('Compute event info')
         event_info = detect_events(outputs, dep, options)
@@ -232,7 +231,7 @@ class OUTPUTS:
         self.fp_dep, self.fp_time, self.fp_data, self.fp_lab = read_csv(fname,target_var)
 
     # ----- Plots
-    def timeseries(self, ax, target_var, **kwargs):
+    def timeseries(self, target_var, **kwargs):
         import myplots
         mp = myplots.Figpref()
         options = mp.default_options.copy()
@@ -240,43 +239,59 @@ class OUTPUTS:
         create_fig = False
         peak_mode = False
 
-        if target_var in ['u0', 'u1']:
+        if target_var == 'displacements':
+            self.get_domain_outputs(domainp_prefix=options['domainp_prefix'])
             loc_info = self.xyloc
+            if not options['target_loc']:
+                raise SyntaxError('No location provided - please provide location for displacement plot')
+            if len(options['target_loc']) == 1:
+                raise SyntaxError('Only x or y coordinate received - please provide a (x, y) location for displacement plot')
         else:
             loc_info = self.dep
+            if options['target_loc'] is None:
+                if options['print_on']: print('Peak Mode')
+                peak_mode = True
+                figname = 'peak_%s'%(target_var)
+            else:
+                if isinstance(options['target_loc'], np.ndarray) or isinstance(options['target_loc'], list):
+                    if len(options['target_loc']) == 2: raise SyntaxError('Two values received - please provide only depth for on-fault variables plot')
 
-        if ax is None:
+        if options['ax'] is None:
             import matplotlib.pylab as plt
             plt.rcParams['font.size'] = '11'
-            fig,ax = plt.subplots(figsize=(10,5))
+            if target_var == 'displacements':
+                fig, [ax,ax2] = plt.subplots(nrows=2, figsize=(10,9), sharex=True)
+            else:
+                fig,ax = plt.subplots(figsize=(10,5))
             create_fig = True
-        
+            if options['print_on']: print('Create figure')
+        else:
+            ax = options['ax']
+            if options['print_on']: print('Use given axis info')
+        del options['ax']
+
         # --- Set x-axis scale and x-label
         time, options['xlab'] = mp.set_time(self.time, options['plot_in_sec'])
 
         # --- 
         if options['target_loc'] is not None:
-            if len(options['target_loc']) == 1:
-                indx = np.argmin(abs(abs(loc_info) - abs(options['target_loc'][0])))
-                if 'T' in target_var:
+            if isinstance(options['target_loc'], np.ndarray) or isinstance(options['target_loc'], list):
+                if len(options['target_loc']) == 2:
+                    dist = np.square(loc_info[0] - options['target_loc'][0]) + np.square(loc_info[1] - options['target_loc'][1])
+                    indx = np.argmin(dist)
                     options['title_on'] = False
+                    figname = 'displacement_at_%dm_%dm'%(options['target_loc'][0]*1e3, options['target_loc'][1]*1e3)
+            else:
+                indx = np.argmin(abs(abs(loc_info) - abs(options['target_loc'])))
+                if options['target_loc'] < 1e-1:
+                    options['fig_title'] = 'At surface'
+                    figname = '%s_at_surface'%(target_var)
                 else:
-                    if options['target_loc'][0] < 1e-1:
-                        options['fig_title'] = 'At surface'
-                        figname = '%s_at_surface'%(target_var)
-                    else:
-                        options['fig_title'] = 'At %1.1f km Depth'%abs(self.dep[indx])
-                        figname = '%s_at_%dm_depth'%(target_var, abs(options['target_loc'][0])*1e3)
-                    if options['print_on']: print(options['fig_title'])
-            elif len(options['target_loc']) == 2:
-                dist = np.square(loc_info[0] - options['target_loc'][0]) + np.square(loc_info[1] - options['target_loc'][1])
-                indx = np.argmin(dist)
-                options['title_on'] = False
-            var = getattr(self, target_var)[indx, :]
+                    options['fig_title'] = 'At %1.1f km Depth'%abs(self.dep[indx])
+                    figname = '%s_at_%dm_depth'%(target_var, abs(options['target_loc'])*1e3)
+                if options['print_on']: print(options['fig_title'])
+                var = getattr(self, target_var)[indx, :]
         else:
-            if options['print_on']: print('Peak Mode')
-            peak_mode = True
-            figname = 'peak_%s'%(target_var)
             var = np.max(abs(getattr(self, target_var)), axis=0)
 
         # --- Set y-scale and y-label
@@ -286,20 +301,20 @@ class OUTPUTS:
         if options['log10'] and target_var == 'sliprate':
             if options['print_on']: print('Slip rate - log10 scale applied')
             ylab = r'$\log_{10}$(%s)'%(ylab)
-            var = np.log10(var)
+            var = np.log10(abs(var))
         options['ylab'] = ylab
         
         # --- Plot the time series
-        ax = mp.plot_timeserise(ax, time, var, **options)
+        if target_var == 'displacements':
+            options['fig_title'] = 'At (%1.1f km, %1.1f km)'%(options['target_loc'][0], options['target_loc'][1])
+            ax = mp.timeseries(ax, time, self.u0[indx, :], **options)
+            ax.set_xlabel('')
+            ax2 = mp.timeseries(ax2, time, self.u1[indx, :], **options)
+        else:
+            ax = mp.plot_timeserise(ax, time, var, **options)
         if create_fig: 
             plt.tight_layout()
             if options['save_on']:
-                # if peak_mode:
-                #     figname = 'peak_%s'%(target_var)
-                # elif len(options['target_loc']) == 1:
-                #     figname = '%s_at_%dm_depth'%(target_var, abs(options['target_loc'][0])*1e3)
-                # elif len(options['target_loc']) == 2:
-                #     figname = '%s_at_%dm_%dm'%(target_var, abs(options['target_loc'][0])*1e3, abs(options['target_loc'][1])*1e3)
                 if options['plot_in_timestep']: plt.savefig('%s/%s_timesteps.png'%(options['save_dir'], figname), dpi=150)
                 else: plt.savefig('%s/%s.png'%(options['save_dir'], figname), dpi=150)
-        return ax
+        # return ax
