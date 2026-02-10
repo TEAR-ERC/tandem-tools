@@ -26,20 +26,21 @@ def select_output_dir(**kwargs):
     """
     Create a dropdown widget to select a subdirectory of `base_dir`.
     """
+    import os
 
     if 'base_dir_str' in kwargs:
         # Base directory whose subfolders you want to list
         base_dir = Path(kwargs['base_dir_str'])  # <- change this
     else:
         # If not defined, use default base directory
-        base_dir = Path("../")
-
+        base_dir = Path(".")
+    default_job_name = 'example_outputs'
 
     # Gather job names
     job_names = sorted(
         [d.name for d in base_dir.iterdir() if d.is_dir()]
     )
-    job_names.insert(0, '')
+    job_names.insert(0, default_job_name)
 
     # Do not show pycache for cleaness
     if '__pycache__' in job_names:
@@ -52,17 +53,20 @@ def select_output_dir(**kwargs):
         layout={'width': '300px'},
         style={'description_width': 'initial'}
     )
-    info_label = Label("No folder selected yet")
 
     state = {
-        "full_path": None,
-        "job_name" : None,
-        }
+        "full_path": base_dir / default_job_name,
+        "job_name" : default_job_name,
+    }
+
+    info_label = Label(f"Selected job name: {state['job_name']}")
 
     def on_change(change):
         if change["name"] == "value" and change["new"] is not None:
             state["full_path"] = base_dir / change["new"]
             state["job_name"] = change["new"]
+            if state["job_name"] == default_job_name:
+                state["full_path"] = '.' / change["new"]
             info_label.value = f"Selected job name: {state['job_name']}"
 
     dropdown.observe(on_change, names="value")
@@ -145,14 +149,13 @@ def select_evolution_type():
     return dropdown, info_label, get_selected_evolution_type
 
 def select_timeseries_type():
-    timeseries_types = ['', 'State Variable', 'Cumulative Slip', 'Slip Rate', 'Shear Stress', 'Normal Stress', 'Displacement']
+    timeseries_types = ['', 'State Variable', 'Cumulative Slip', 'Slip Rate', 'Shear Stress', 'Normal Stress']
     args ={
         'State Variable': 'state',
         'Cumulative Slip' : 'slip',
         'Slip Rate' : 'sliprate',
         'Shear Stress' : 'shearT',
         'Normal Stress' : 'normalT',
-        'Displacement' : 'displacements'
     }
 
     # Create a dropdown menu
@@ -181,80 +184,23 @@ def select_timeseries_type():
 
     return dropdown, info_label, get_selected_timeseries_types
 
-def select_path_to_mesh(save_dir):
+def select_mesh(save_dir):
     from glob import glob
 
-    candidates = []
-    for p in glob(str(save_dir / '*.msh')):
-        candidates.append(p.split('/')[-1])
-    candidates.insert(0, '')
+    mesh_path = glob(str(save_dir / '*.msh'))[0]
 
-    # Create a dropdown menu
-    dropdown = Dropdown(
-        options=candidates,
-        description='Mesh file (.msh):',
-        layout={'width': '300px'},
-        style={'description_width': 'initial'}
-    )
-    info_label = Label("No mesh file selected yet")
-
-    state = {
-        "mesh_path": None
-        }
-
-    def on_change(change):
-        if change["name"] == "value" and change["new"] is not None:
-            state["mesh_path"] = change["new"]
-            info_label.value = f"Selected mesh file: {save_dir / state['mesh_path']}"
-
-    dropdown.observe(on_change, names="value")
-
-    def get_selected_mesh_path():
-        """Return the current selected mesh path (or None if not selected)."""
-        return save_dir / state['mesh_path']
-
-    return dropdown, info_label, get_selected_mesh_path
+    return mesh_path
 
 def select_lua_scenario(save_dir):
     from glob import glob
 
-    candidates = []
-    for p in glob(str(save_dir / '*.toml')):
-        candidates.append(p.split('/')[-1])
-    candidates.insert(0, '')
+    toml_path = glob(str(save_dir / '*.toml'))[0]
 
-    # Create a dropdown menu
-    dropdown = Dropdown(
-        options=candidates,
-        description='Parameter file (.toml):',
-        layout={'width': '300px'},
-        style={'description_width': 'initial'}
-    )
-    info_label = Label("No mesh file selected yet")
+    with open(toml_path, 'r') as fid:
+        for line in fid:
+            if 'lib' in line.strip():
+                lua_lib_name = line.strip().split('\"')[1]
+            if 'scenario' in line.strip():
+                lua_scenario_name = line.strip().split('\"')[1]
 
-    state = {
-        "toml_path": None
-        }
-
-    def on_change(change):
-        if change["name"] == "value" and change["new"] is not None:
-            state["toml_path"] = change["new"]
-            info_label.value = f"Selected mesh file: {save_dir / state['toml_path']}"
-
-    dropdown.observe(on_change, names="value")
-
-    def extract_lua_info(toml_path):
-        with open(toml_path, 'r') as fid:
-            for line in fid:
-                if 'lib' in line.strip():
-                    lua_lib_name = line.strip().split('\"')[1]
-                if 'scenario' in line.strip():
-                    lua_scenario_name = line.strip().split('\"')[1]
-        return lua_lib_name, lua_scenario_name
-
-    def get_selected_lua_scenario():
-        """Return the current selected lua information (or None if not selected)."""
-        lua_lib_name, lua_scenario_name = extract_lua_info(save_dir / state['toml_path'])
-        return lua_lib_name, lua_scenario_name
-
-    return dropdown, info_label, get_selected_lua_scenario
+    return lua_lib_name, lua_scenario_name

@@ -317,4 +317,5 @@ class OUTPUTS:
             if options['save_on']:
                 if options['plot_in_timestep']: plt.savefig('%s/%s_timesteps.png'%(options['save_dir'], figname), dpi=150)
                 else: plt.savefig('%s/%s.png'%(options['save_dir'], figname), dpi=150)
+            plt.show()
         # return ax

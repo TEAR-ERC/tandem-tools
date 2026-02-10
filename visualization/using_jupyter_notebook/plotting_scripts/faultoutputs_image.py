@@ -271,13 +271,20 @@ def plot_image(X, Y, var, outputs, event_info, options):
     plt.rcParams['font.size'] = '27'
     _,ax = plt.subplots(figsize=(options['horz_size'], options['vert_size']))
 
-    if 'd' in options['target_variable']:
-        maxdvar = max([abs(np.min(var)), abs(np.max(var))])
-        options['vmin'] = -maxdvar
-        options['vmax'] = maxdvar
-    elif 'sliprate' in options['target_variable']:
-        options['vmin'] = 1e-12
-        options['vmax'] = 1e1
+    maxdvar = max([abs(np.min(var)), abs(np.max(var))])
+    if options['vmin'] is None:
+        if 'd' in options['target_variable']:
+            options['vmin'] = -maxdvar
+        elif 'sliprate' in options['target_variable']:
+            options['vmin'] = 1e-12
+    if options['vmax'] is None:
+        if 'd' in options['target_variable']:
+            options['vmax'] = maxdvar
+        elif 'sliprate' in options['target_variable']:
+            options['vmax'] = 1e1
+    if abs(options['vmax'] - options['vmin']) < 1e-10:
+        options['vmax'] = 1e-3
+        options['vmin'] = -1e-3
     cmap_n,cb_label = gen_cmap(options)
 
     if options['target_variable'] == 'sliprate':
@@ -292,6 +299,7 @@ def plot_image(X, Y, var, outputs, event_info, options):
     else:
         cb = plt.pcolormesh(X, Y, var, cmap=cmap_n, vmin= options['vmin'], vmax= options['vmax'])
         acolor = 'w'
+
     if not options['colorbar_off']:
         plt.colorbar(cb, extend='both').set_label(cb_label, fontsize=30, rotation=270, labelpad=30) # vertical colorbar
 
